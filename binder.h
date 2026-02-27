@@ -32,6 +32,20 @@ int binder_call(struct binder_state *bs,
                 void *data,
                 size_t data_size);
 
+int binder_transact(struct binder_state *bs,
+                    uint32_t target_handle,
+                    uint32_t code,
+                    void *data,
+                    size_t data_size,
+                    void *reply_data,
+                    size_t reply_capacity,
+                    size_t *reply_size);
+
+int binder_send_reply(struct binder_state *bs,
+                      uint32_t code,
+                      void *data,
+                      size_t data_size);
+
 void binder_free_buffer(struct binder_state *bs, binder_uintptr_t buffer_ptr);
 
 #endif // __BINDER_H_

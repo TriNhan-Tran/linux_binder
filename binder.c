@@ -92,13 +92,20 @@ static int binder_parse(struct binder_state *bs, struct binder_io *bio,
         case BR_TRANSACTION_COMPLETE:
             // LOGI("BR_TRANSACTION_COMPLETE");
             break;
-        case BR_TRANSACTION:
-        case BR_REPLY: {
+        case BR_TRANSACTION: {
             struct binder_transaction_data *txn = (struct binder_transaction_data *)p;
             if (func) {
                 func(bs, txn);
             }
 
+            if (txn->data.ptr.buffer) {
+                 binder_free_buffer(bs, txn->data.ptr.buffer);
+            }
+            p += sizeof(*txn);
+            break;
+        }
+        case BR_REPLY: {
+            struct binder_transaction_data *txn = (struct binder_transaction_data *)p;
             if (txn->data.ptr.buffer) {
                  binder_free_buffer(bs, txn->data.ptr.buffer);
             }
@@ -180,6 +187,148 @@ int binder_call(struct binder_state *bs,
     } __attribute__((packed)) write_data;
 
     write_data.cmd = BC_TRANSACTION;
+    write_data.txn = tr;
+
+    return binder_write(bs, &write_data, sizeof(write_data));
+}
+
+int binder_transact(struct binder_state *bs,
+                    uint32_t target_handle,
+                    uint32_t code,
+                    void *data,
+                    size_t data_size,
+                    void *reply_data,
+                    size_t reply_capacity,
+                    size_t *reply_size)
+{
+    if (!bs || !reply_data || reply_capacity == 0 || !reply_size) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    *reply_size = 0;
+
+    struct binder_transaction_data tr;
+    memset(&tr, 0, sizeof(tr));
+    tr.target.handle = target_handle;
+    tr.code = code;
+    tr.flags = 0;
+    tr.data_size = data_size;
+    tr.data.ptr.buffer = (uintptr_t)data;
+    tr.data.ptr.offsets = 0;
+
+    struct {
+        uint32_t cmd;
+        struct binder_transaction_data txn;
+    } __attribute__((packed)) write_data;
+
+    write_data.cmd = BC_TRANSACTION;
+    write_data.txn = tr;
+
+    uint8_t readbuf[32 * 1024];
+    int first_round = 1;
+
+    for (;;) {
+        struct binder_write_read bwr;
+        memset(&bwr, 0, sizeof(bwr));
+
+        if (first_round) {
+            bwr.write_size = sizeof(write_data);
+            bwr.write_buffer = (binder_uintptr_t)&write_data;
+            first_round = 0;
+        }
+
+        bwr.read_size = sizeof(readbuf);
+        bwr.read_buffer = (binder_uintptr_t)readbuf;
+
+        int rc = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
+        if (rc < 0) {
+            LOGE("binder_transact: ioctl failed (%s)", strerror(errno));
+            return -1;
+        }
+
+        uint8_t *p = readbuf;
+        uint8_t *end = readbuf + bwr.read_consumed;
+
+        while (p < end) {
+            uint32_t cmd = *(uint32_t *)p;
+            p += sizeof(uint32_t);
+
+            if (cmd == BR_NOOP || cmd == BR_TRANSACTION_COMPLETE) {
+                continue;
+            }
+
+            if (cmd == BR_REPLY) {
+                struct binder_transaction_data *txn = (struct binder_transaction_data *)p;
+                p += sizeof(*txn);
+
+                if (txn->data_size > reply_capacity) {
+                    if (txn->data.ptr.buffer) {
+                        binder_free_buffer(bs, txn->data.ptr.buffer);
+                    }
+                    errno = EMSGSIZE;
+                    return -1;
+                }
+
+                if (txn->data_size > 0 && txn->data.ptr.buffer) {
+                    memcpy(reply_data, (void *)txn->data.ptr.buffer, txn->data_size);
+                    *reply_size = txn->data_size;
+                    binder_free_buffer(bs, txn->data.ptr.buffer);
+                }
+
+                return 0;
+            }
+
+            if (cmd == BR_FAILED_REPLY || cmd == BR_DEAD_REPLY || cmd == BR_DEAD_BINDER) {
+                errno = EIO;
+                return -1;
+            }
+
+            if (cmd == BR_TRANSACTION) {
+                struct binder_transaction_data *txn = (struct binder_transaction_data *)p;
+                p += sizeof(*txn);
+                if (txn->data.ptr.buffer) {
+                    binder_free_buffer(bs, txn->data.ptr.buffer);
+                }
+                continue;
+            }
+
+            if (cmd == BR_TRANSACTION_SEC_CTX) {
+                struct binder_transaction_data_secctx *txn = (struct binder_transaction_data_secctx *)p;
+                p += sizeof(*txn);
+                if (txn->transaction_data.data.ptr.buffer) {
+                    binder_free_buffer(bs, txn->transaction_data.data.ptr.buffer);
+                }
+                continue;
+            }
+
+            errno = EPROTO;
+            return -1;
+        }
+    }
+}
+
+int binder_send_reply(struct binder_state *bs,
+                      uint32_t code,
+                      void *data,
+                      size_t data_size)
+{
+    struct binder_transaction_data tr;
+    memset(&tr, 0, sizeof(tr));
+
+    tr.target.ptr = 0;
+    tr.code = code;
+    tr.flags = 0;
+    tr.data_size = data_size;
+    tr.data.ptr.buffer = (uintptr_t)data;
+    tr.data.ptr.offsets = 0;
+
+    struct {
+        uint32_t cmd;
+        struct binder_transaction_data txn;
+    } __attribute__((packed)) write_data;
+
+    write_data.cmd = BC_REPLY;
     write_data.txn = tr;
 
     return binder_write(bs, &write_data, sizeof(write_data));
