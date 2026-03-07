@@ -1,0 +1,29 @@
+# Build artifacts
+build/
+build_*/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+CMakeFiles/
+
+# Objects and libraries
+*.o
+*.a
+*.so
+*.dylib
+*.obj
+
+# Logs
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db

@@ -1,10 +1,16 @@
 #!/bin/bash
 
-# This script mounts the binder filesystem at /dev/binderfs
-sudo mkdir -p /dev/binderfs
-sudo mount -t binder binder /dev/binderfs
+set -euo pipefail
 
-sudo chown root:binderfs /dev/binderfs
-sudo chown root:binderfs /dev/binderfs/binder
-sudo chmod 750 /dev/binderfs
-sudo chmod 660 /dev/binderfs/binder
+# This script mounts binderfs at /dev/binderfs and prepares binder device perms.
+if [[ ! -d /dev/binderfs ]]; then
+	sudo mkdir -p /dev/binderfs
+fi
+
+if ! mountpoint -q /dev/binderfs; then
+	sudo mount -t binder binder /dev/binderfs -o stats=global
+fi
+
+if [[ -e /dev/binderfs/binder ]]; then
+	sudo chmod 666 /dev/binderfs/binder
+fi
