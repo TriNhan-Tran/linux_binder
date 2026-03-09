@@ -76,7 +76,7 @@ void binder_loop_ctx(struct binder_state *bs, binder_handler_ctx_func func, void
 /**
  * @brief Perform synchronous binder transaction and read reply.
  */
-int binder_transact2(struct binder_state *bs,
+int binder_transact(struct binder_state *bs,
                      uint32_t target_handle,
                      uint32_t code,
                      const void *data, size_t data_size,
@@ -87,7 +87,7 @@ int binder_transact2(struct binder_state *bs,
 /**
  * @brief Send one-way binder transaction.
  */
-int binder_call2(struct binder_state *bs,
+int binder_call(struct binder_state *bs,
                  uint32_t target_handle,
                  uint32_t code,
                  void *data, size_t data_size,
@@ -96,7 +96,7 @@ int binder_call2(struct binder_state *bs,
 /**
  * @brief Send binder reply payload.
  */
-int binder_send_reply2(struct binder_state *bs,
+int binder_send_reply(struct binder_state *bs,
                        const void *data, size_t data_size,
                        const binder_size_t *offsets, size_t offsets_size);
 

@@ -1,25 +1,26 @@
-#include "AudioSrvApp.hpp"
+#include "AudioSrvApp.h"
 
-#include "AudioSrvHost.hpp"
-#include "BinderCore.hpp"
-#include "SrvManagerIpc.hpp"
-#include "TxnCodes.hpp"
+#include "AudioSrv.h"
+#include "BinderClient.h"
+#include "BinderUtils.h"
+#include "ServiceManager.h"
+#include "TransactionCode.h"
 
 namespace demo {
 
 int AudioSrvApp::run() {
     LOGI("=== AudioSrv starting ===");
 
-    ipc::ProcessState::self().open("/dev/binderfs/binder");
+    ipc::ProcessState::self().open(ipc::BINDER_DRIVER_PATH);
     if (!ipc::ProcessState::self().isOpen()) {
         LOGE("AudioSrv: failed to open binder driver");
         return 1;
     }
 
-    AudioSrvHost host;
+    AudioSrv audioSrv;
 
-    ipc::BpSrvManager srvManager;
-    const int status = srvManager.addSrv(ipc::AUDIO_SRV_NAME, &host);
+    ipc::ServiceManager srvManager;
+    const int status = srvManager.addSrv(ipc::AUDIO_SRV_NAME, &audioSrv);
     if (status != 0) {
         LOGE("AudioSrv: failed to register with SrvManager");
         return 1;

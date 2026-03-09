@@ -1,6 +1,6 @@
-#include "AppRunner.hpp"
+#include "App.h"
 
 int main() {
-    demo::AppRunner app;
+    demo::App app;
     return app.run();
 }
