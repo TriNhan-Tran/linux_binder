@@ -33,7 +33,7 @@ void Parcel::writeString(const std::string& value) {
 
 void Parcel::writeStrongBinder(const BBinder* localBinder) {
     if (localBinder == nullptr) {
-        LOGE("Parcel::writeStrongBinder: localBinder is null");
+        LOG_ERROR("Parcel::writeStrongBinder: localBinder is null");
         return;
     }
 
@@ -91,13 +91,13 @@ std::string Parcel::readString() {
 
 uint32_t Parcel::readBinderHandle() {
     if (!alignReadForBinderObject()) {
-        LOGE("Parcel::readBinderHandle: invalid aligned read position");
+        LOG_ERROR("Parcel::readBinderHandle: invalid aligned read position");
         return 0;
     }
 
     struct flat_binder_object object;
     if (m_readPos + sizeof(object) > m_data.size()) {
-        LOGE("Parcel::readBinderHandle: not enough data");
+        LOG_ERROR("Parcel::readBinderHandle: not enough data");
         return 0;
     }
 
@@ -108,7 +108,7 @@ uint32_t Parcel::readBinderHandle() {
         return object.handle;
     }
 
-    LOGE("Parcel::readBinderHandle: unexpected type 0x%x (expected HANDLE)",
+    LOG_ERROR("Parcel::readBinderHandle: unexpected type 0x%x (expected HANDLE)",
          object.hdr.type);
     return 0;
 }

@@ -9,11 +9,11 @@
 namespace demo {
 
 int LedSrvApp::run() {
-    LOGI("=== LedSrv starting ===");
+    LOG_INFO("=== LedSrv starting ===");
 
     ipc::ProcessState::self().open(ipc::BINDER_DRIVER_PATH);
     if (!ipc::ProcessState::self().isOpen()) {
-        LOGE("LedSrv: failed to open binder driver");
+        LOG_ERROR("LedSrv: failed to open binder driver");
         return 1;
     }
 
@@ -22,12 +22,12 @@ int LedSrvApp::run() {
     ipc::ServiceManager srvManager;
     const int status = srvManager.addSrv(ipc::LED_SRV_NAME, &ledSrv);
     if (status != 0) {
-        LOGE("LedSrv: failed to register with SrvManager");
+        LOG_ERROR("LedSrv: failed to register with SrvManager");
         return 1;
     }
-    LOGI("LedSrv: registered with SrvManager");
+    LOG_INFO("LedSrv: registered with SrvManager");
 
-    LOGI("LedSrv: entering binder loop...");
+    LOG_INFO("LedSrv: entering binder loop...");
     ipc::IPCThreadState::joinThreadPool(nullptr);
     return 0;
 }

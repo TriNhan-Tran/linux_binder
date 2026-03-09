@@ -19,7 +19,7 @@ int BnLedSrv::onTransact(uint32_t code, const Parcel& data, Parcel* reply) {
     case LED_SRV_REGISTER_CALLBACK: {
         uint32_t callbackHandle = in.readBinderHandle();
         if (callbackHandle != 0 && IPCThreadState::acquireHandle(callbackHandle) != 0) {
-            LOGE("BnLedSrv: failed to acquire callback handle %u", callbackHandle);
+            LOG_ERROR("BnLedSrv: failed to acquire callback handle %u", callbackHandle);
             callbackHandle = 0;
         }
 
@@ -30,7 +30,7 @@ int BnLedSrv::onTransact(uint32_t code, const Parcel& data, Parcel* reply) {
         return 0;
     }
     default:
-        LOGE("BnLedSrv: unknown code %u", code);
+        LOG_ERROR("BnLedSrv: unknown code %u", code);
         return -1;
     }
 }

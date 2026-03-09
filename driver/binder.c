@@ -8,6 +8,10 @@
 #include <sys/mman.h>
 #include "binder.h"
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 struct binder_state *binder_open(const char* driver)
 {
     struct binder_state *bs;
@@ -16,14 +20,14 @@ struct binder_state *binder_open(const char* driver)
 
     bs->fd = open(driver, O_RDWR | O_CLOEXEC);
     if (bs->fd < 0) {
-        LOGE("Cannot open %s (%s)", driver, strerror(errno));
+        LOG_ERROR("Cannot open %s (%s)", driver, strerror(errno));
         goto fail_open;
     }
 
     bs->mapsize = 1 * 1024 * 1024; // 1MB default size
     bs->mapped = mmap(NULL, bs->mapsize, PROT_READ, MAP_PRIVATE, bs->fd, 0);
     if (bs->mapped == MAP_FAILED) {
-        LOGE("Cannot mmap binder (%s)", strerror(errno));
+        LOG_ERROR("Cannot mmap binder (%s)", strerror(errno));
         goto fail_map;
     }
 
@@ -58,7 +62,7 @@ static int binder_write(struct binder_state *bs, void *data, size_t len)
 
     int res = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
     if (res < 0) {
-        LOGE("binder_write: ioctl failed (%s)", strerror(errno));
+        LOG_ERROR("binder_write: ioctl failed (%s)", strerror(errno));
     }
     return res;
 }
@@ -133,7 +137,7 @@ static int binder_consume_common_br_command(struct binder_state *bs,
     case BR_DEAD_BINDER:
     case BR_CLEAR_DEATH_NOTIFICATION_DONE:
         if (cmd == BR_DEAD_BINDER) {
-            LOGE("BR_DEAD_BINDER");
+            LOG_ERROR("BR_DEAD_BINDER");
         }
         *cursor += sizeof(binder_uintptr_t);
         return 1;
@@ -174,7 +178,7 @@ static void binder_acquire_handles_in_transaction(struct binder_state *bs,
     for (size_t i = 0; i < offsets_count; ++i) {
         binder_size_t off = offsets[i];
         if (off + sizeof(struct flat_binder_object) > txn->data_size) {
-            LOGE("binder_acquire_handles_in_transaction: invalid object offset %llu",
+            LOG_ERROR("binder_acquire_handles_in_transaction: invalid object offset %llu",
                  (unsigned long long)off);
             continue;
         }
@@ -183,7 +187,7 @@ static void binder_acquire_handles_in_transaction(struct binder_state *bs,
             (const struct flat_binder_object *)(buffer + off);
         if (obj->hdr.type == BINDER_TYPE_HANDLE && obj->handle != 0) {
             if (binder_acquire_handle(bs, obj->handle) < 0) {
-                LOGE("binder_acquire_handles_in_transaction: acquire failed for handle %u",
+                LOG_ERROR("binder_acquire_handles_in_transaction: acquire failed for handle %u",
                      obj->handle);
             }
         }
@@ -203,7 +207,7 @@ static int binder_parse_ctx(struct binder_state *bs,
 
         int common_result = binder_consume_common_br_command(bs, cmd, &p);
         if (common_result < 0) {
-            LOGE("binder_parse_ctx: failed to ack ref cmd=%u", cmd);
+            LOG_ERROR("binder_parse_ctx: failed to ack ref cmd=%u", cmd);
             return -1;
         }
         if (common_result > 0) {
@@ -244,13 +248,13 @@ static int binder_parse_ctx(struct binder_state *bs,
             break;
         }
         case BR_FROZEN_REPLY:
-            LOGE("BR_FROZEN_REPLY");
+            LOG_ERROR("BR_FROZEN_REPLY");
             break;
         case BR_FAILED_REPLY:
-            LOGE("BR_FAILED_REPLY");
+            LOG_ERROR("BR_FAILED_REPLY");
             break;
         case BR_DEAD_REPLY:
-            LOGE("BR_DEAD_REPLY");
+            LOG_ERROR("BR_DEAD_REPLY");
             break;
         default:
             return -1;
@@ -268,7 +272,7 @@ void binder_loop_ctx(struct binder_state *bs, binder_handler_ctx_func func, void
     uint32_t cmd = BC_ENTER_LOOPER;
     binder_write(bs, &cmd, sizeof(cmd));
 
-    LOGI("Binder Loop (ctx): Entered");
+    LOG_INFO("Binder Loop (ctx): Entered");
 
     for (;;) {
         bwr.read_size = sizeof(read_buffer);
@@ -287,16 +291,16 @@ void binder_loop_ctx(struct binder_state *bs, binder_handler_ctx_func func, void
             }
 
             if (errno == EBADF || errno == ENODEV) {
-                LOGI("binder_loop_ctx: stopping loop (%s)", strerror(errno));
+                LOG_INFO("binder_loop_ctx: stopping loop (%s)", strerror(errno));
             } else {
-                LOGE("binder_loop_ctx: ioctl failed (%s)", strerror(errno));
+                LOG_ERROR("binder_loop_ctx: ioctl failed (%s)", strerror(errno));
             }
             break;
         }
 
         res = binder_parse_ctx(bs, (uintptr_t)read_buffer, bwr.read_consumed, func, context);
         if (res != 0) {
-            LOGE("binder_loop_ctx: parse error");
+            LOG_ERROR("binder_loop_ctx: parse error");
             break;
         }
     }
@@ -345,7 +349,7 @@ int binder_transact(struct binder_state *bs,
 
     int res = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
     if (res < 0) {
-        LOGE("binder_transact: ioctl failed (%s)", strerror(errno));
+        LOG_ERROR("binder_transact: ioctl failed (%s)", strerror(errno));
         return -1;
     }
 
@@ -362,7 +366,7 @@ int binder_transact(struct binder_state *bs,
 
             int common_result = binder_consume_common_br_command(bs, cmd, &p);
             if (common_result < 0) {
-                LOGE("binder_transact: failed to ack ref cmd=%u", cmd);
+                LOG_ERROR("binder_transact: failed to ack ref cmd=%u", cmd);
                 return -1;
             }
             if (common_result > 0) {
@@ -406,10 +410,10 @@ int binder_transact(struct binder_state *bs,
             }
             case BR_DEAD_REPLY:
             case BR_FAILED_REPLY:
-                LOGE("binder_transact: reply error (cmd=%u)", cmd);
+                LOG_ERROR("binder_transact: reply error (cmd=%u)", cmd);
                 return -1;
             default:
-                LOGE("binder_transact: unknown BR cmd=%u", cmd);
+                LOG_ERROR("binder_transact: unknown BR cmd=%u", cmd);
                 p = end;
                 break;
             }
@@ -421,7 +425,7 @@ int binder_transact(struct binder_state *bs,
             bwr.read_buffer = (binder_uintptr_t)read_buffer;
             res = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
             if (res < 0) {
-                LOGE("binder_transact: ioctl read failed (%s)", strerror(errno));
+                LOG_ERROR("binder_transact: ioctl read failed (%s)", strerror(errno));
                 return -1;
             }
             p = read_buffer;

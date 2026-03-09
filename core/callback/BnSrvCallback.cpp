@@ -7,7 +7,7 @@ namespace ipc {
 
 int BnSrvCallback::onTransact(uint32_t code, const Parcel& data, Parcel* /*reply*/) {
     if (code != SRV_CB_ON_EVENT) {
-        LOGE("BnSrvCallback: unknown code %u", code);
+        LOG_ERROR("BnSrvCallback: unknown code %u", code);
         return -1;
     }
 

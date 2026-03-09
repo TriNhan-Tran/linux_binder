@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #include <linux/android/binder.h>
 
@@ -11,8 +14,34 @@
 extern "C" {
 #endif
 
-#define LOGI(fmt, ...) printf("[INFO] " fmt "\n", ##__VA_ARGS__)
-#define LOGE(fmt, ...) printf("[ERROR] " fmt "\n", ##__VA_ARGS__)
+static inline long binder_log_tid(void)
+{
+#ifdef SYS_gettid
+    return (long)syscall(SYS_gettid);
+#else
+    return (long)getpid();
+#endif
+}
+
+static inline void binder_log_emit(const char* level, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stdout, "[%s][tid=%ld] ", level, binder_log_tid());
+    vfprintf(stdout, fmt, args);
+    fprintf(stdout, "\n");
+    fflush(stdout);
+    va_end(args);
+}
+
+#define LOG_DEBUG(fmt, ...) binder_log_emit("DEBUG", fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) binder_log_emit("INFO", fmt, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...) binder_log_emit("WARN", fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) binder_log_emit("ERROR", fmt, ##__VA_ARGS__)
+
+/* Backward compatibility aliases for existing call sites. */
+#define LOGI(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...) LOG_ERROR(fmt, ##__VA_ARGS__)
 
 struct binder_state {
     int fd;

@@ -21,8 +21,13 @@ void App::handleLedEvent(int32_t eventType, const std::string& message) {
     switch (eventType) {
     case ipc::EVENT_LED_ON: eventName = "LED_ON"; break;
     case ipc::EVENT_LED_OFF: eventName = "LED_OFF"; break;
+    default:
+        LOG_WARN("[App] handleLedEvent unexpected eventType=%d message='%s'",
+                 eventType,
+                 message.c_str());
+        break;
     }
-    LOGI("[App] CALLBACK >>> %s (%d): \"%s\"", eventName, eventType, message.c_str());
+    LOG_INFO("[App] CALLBACK >>> %s (%d): \"%s\"", eventName, eventType, message.c_str());
 }
 
 void App::handleAudioEvent(int32_t eventType, const std::string& message) {
@@ -30,9 +35,14 @@ void App::handleAudioEvent(int32_t eventType, const std::string& message) {
     switch (eventType) {
     case ipc::EVENT_AUDIO_PLAYING: eventName = "AUDIO_PLAYING"; break;
     case ipc::EVENT_AUDIO_STOPPED: eventName = "AUDIO_STOPPED"; break;
-    default: eventName = "AUDIO_UNKNOWN"; break;
+    default:
+        eventName = "AUDIO_UNKNOWN";
+        LOG_WARN("[App] handleAudioEvent unexpected eventType=%d message='%s'",
+                 eventType,
+                 message.c_str());
+        break;
     }
-    LOGI("[App] CALLBACK >>> %s (%d): \"%s\"", eventName, eventType, message.c_str());
+    LOG_INFO("[App] CALLBACK >>> %s (%d): \"%s\"", eventName, eventType, message.c_str());
 }
 
 void App::releaseHandleIfValid(uint32_t handle, const char* label) {
@@ -41,15 +51,15 @@ void App::releaseHandleIfValid(uint32_t handle, const char* label) {
     }
 
     if (ipc::IPCThreadState::releaseHandle(handle) != 0) {
-        LOGE("[App] Failed to release %s handle=%u", label, handle);
+        LOG_ERROR("[App] Failed to release %s handle=%u", label, handle);
     } else {
-        LOGI("[App] Released %s handle=%u", label, handle);
+        LOG_INFO("[App] Released %s handle=%u", label, handle);
     }
 }
 
 void App::startCallbackListener() {
     std::thread([]() {
-        LOGI("[App] Callback listener thread started");
+        LOG_INFO("[App] Callback listener thread started");
         ipc::IPCThreadState::joinThreadPool(nullptr);
     }).detach();
 }
@@ -58,28 +68,30 @@ uint32_t App::lookupSrvWithRetry(
     ipc::ServiceManager& srvManager,
     const char* srvName,
     int maxRetries) {
-    LOGI("[App] Looking up %s...", srvName);
+    LOG_INFO("[App] Looking up %s...", srvName);
     for (int retry = 0; retry < maxRetries; ++retry) {
+        LOG_INFO("[App][Stress] lookup iteration %d/%d for %s", retry + 1, maxRetries, srvName);
         const uint32_t handle = srvManager.getSrv(srvName);
         if (handle != 0) {
-            LOGI("[App] Found %s -> handle %u (DIRECT)", srvName, handle);
+            LOG_INFO("[App] Found %s -> handle %u (DIRECT)", srvName, handle);
             return handle;
         }
 
-        LOGI("[App] %s not ready, retrying...", srvName);
+        LOG_INFO("[App] %s not ready, retrying...", srvName);
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    LOGE("[App] Failed to find %s", srvName);
+    LOG_ERROR("[App] Failed to find %s", srvName);
     return 0;
 }
 
 int App::run() {
-    LOGI("=== App starting ===");
+    LOG_INFO("=== App starting ===");
+    LOG_INFO("[App][Stress] Test sequence started");
 
     ipc::ProcessState::self().open(ipc::BINDER_DRIVER_PATH);
     if (!ipc::ProcessState::self().isOpen()) {
-        LOGE("App: failed to open binder driver");
+        LOG_ERROR("App: failed to open binder driver");
         return 1;
     }
 
@@ -114,9 +126,9 @@ int App::run() {
     ledAdapter.initialize(ledHandle);
     audioAdapter.initialize(audioHandle);
 
-    LOGI("[App] Registering callback with LedSrv...");
+    LOG_INFO("[App] Registering callback with LedSrv...");
     if (ledAdapter.registerCallback() != 0) {
-        LOGE("[App] Failed to register LED callback");
+        LOG_ERROR("[App] Failed to register LED callback");
         audioAdapter.shutdown();
         ledAdapter.shutdown();
         releaseHandleIfValid(audioHandle, ipc::AUDIO_SRV_NAME);
@@ -124,9 +136,9 @@ int App::run() {
         return 1;
     }
 
-    LOGI("[App] Registering callback with AudioSrv...");
+    LOG_INFO("[App] Registering callback with AudioSrv...");
     if (audioAdapter.registerCallback() != 0) {
-        LOGE("[App] Failed to register audio callback");
+        LOG_ERROR("[App] Failed to register audio callback");
         audioAdapter.shutdown();
         ledAdapter.shutdown();
         releaseHandleIfValid(audioHandle, ipc::AUDIO_SRV_NAME);
@@ -136,34 +148,44 @@ int App::run() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    LOGI("[App] ========================================");
-    LOGI("[App] Calling LedSrv::requestLedOn()");
-    LOGI("[App] ========================================");
+    LOG_INFO("[App] ========================================");
+    LOG_INFO("[App] Calling LedSrv::requestLedOn()");
+    LOG_INFO("[App] ========================================");
     int ret = ledAdapter.requestLedOn();
-    LOGI("[App] requestLedOn() returned: %d", ret);
+    LOG_INFO("[App] requestLedOn() returned: %d", ret);
+    if (ret != 0) {
+        LOG_WARN("[App] requestLedOn() returned non-zero status=%d", ret);
+    }
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    LOGI("[App] ========================================");
-    LOGI("[App] Calling AudioSrv::playAudio()");
-    LOGI("[App] ========================================");
+    LOG_INFO("[App] ========================================");
+    LOG_INFO("[App] Calling AudioSrv::playAudio()");
+    LOG_INFO("[App] ========================================");
     ret = audioAdapter.playAudio();
-    LOGI("[App] playAudio() returned: %d", ret);
+    LOG_INFO("[App] playAudio() returned: %d", ret);
+    if (ret != 0) {
+        LOG_WARN("[App] playAudio() returned non-zero status=%d", ret);
+    }
 
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    LOGI("[App] ========================================");
-    LOGI("[App] Calling AudioSrv::stopAudio()");
-    LOGI("[App] ========================================");
+    LOG_INFO("[App] ========================================");
+    LOG_INFO("[App] Calling AudioSrv::stopAudio()");
+    LOG_INFO("[App] ========================================");
     ret = audioAdapter.stopAudio();
-    LOGI("[App] stopAudio() returned: %d", ret);
+    LOG_INFO("[App] stopAudio() returned: %d", ret);
+    if (ret != 0) {
+        LOG_WARN("[App] stopAudio() returned non-zero status=%d", ret);
+    }
 
-    LOGI("[App] Waiting for LED auto-off notification...");
+    LOG_INFO("[App] Waiting for LED auto-off notification...");
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
-    LOGI("[App] ========================================");
-    LOGI("[App] All tests completed. Exiting.");
-    LOGI("[App] ========================================");
+    LOG_INFO("[App] ========================================");
+    LOG_INFO("[App] All tests completed. Exiting.");
+    LOG_INFO("[App] ========================================");
+    LOG_INFO("[App][Stress] Test sequence completed");
 
     audioAdapter.shutdown();
     ledAdapter.shutdown();

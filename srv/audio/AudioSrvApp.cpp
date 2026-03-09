@@ -9,11 +9,11 @@
 namespace demo {
 
 int AudioSrvApp::run() {
-    LOGI("=== AudioSrv starting ===");
+    LOG_INFO("=== AudioSrv starting ===");
 
     ipc::ProcessState::self().open(ipc::BINDER_DRIVER_PATH);
     if (!ipc::ProcessState::self().isOpen()) {
-        LOGE("AudioSrv: failed to open binder driver");
+        LOG_ERROR("AudioSrv: failed to open binder driver");
         return 1;
     }
 
@@ -22,12 +22,12 @@ int AudioSrvApp::run() {
     ipc::ServiceManager srvManager;
     const int status = srvManager.addSrv(ipc::AUDIO_SRV_NAME, &audioSrv);
     if (status != 0) {
-        LOGE("AudioSrv: failed to register with SrvManager");
+        LOG_ERROR("AudioSrv: failed to register with SrvManager");
         return 1;
     }
-    LOGI("AudioSrv: registered with SrvManager");
+    LOG_INFO("AudioSrv: registered with SrvManager");
 
-    LOGI("AudioSrv: entering binder loop...");
+    LOG_INFO("AudioSrv: entering binder loop...");
     ipc::IPCThreadState::joinThreadPool(nullptr);
     return 0;
 }

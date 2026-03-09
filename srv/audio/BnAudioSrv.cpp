@@ -26,7 +26,7 @@ int BnAudioSrv::onTransact(uint32_t code, const Parcel& data, Parcel* reply) {
     case AUDIO_SRV_REGISTER_CALLBACK: {
         uint32_t callbackHandle = in.readBinderHandle();
         if (callbackHandle != 0 && IPCThreadState::acquireHandle(callbackHandle) != 0) {
-            LOGE("BnAudioSrv: failed to acquire callback handle %u", callbackHandle);
+            LOG_ERROR("BnAudioSrv: failed to acquire callback handle %u", callbackHandle);
             callbackHandle = 0;
         }
 
@@ -37,7 +37,7 @@ int BnAudioSrv::onTransact(uint32_t code, const Parcel& data, Parcel* reply) {
         return 0;
     }
     default:
-        LOGE("BnAudioSrv: unknown code %u", code);
+        LOG_ERROR("BnAudioSrv: unknown code %u", code);
         return -1;
     }
 }
