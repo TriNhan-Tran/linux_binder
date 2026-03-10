@@ -92,7 +92,10 @@ void AudioSrvAdapter::onAudioEvent(int32_t eventType, const std::string& message
              eventType,
              message.c_str());
     if (m_app != nullptr) {
-        m_app->handleAudioEvent(eventType, message);
+        Message appMessage;
+        appMessage.what = App::MSG_AUDIO_EVENT;
+        appMessage.obj = App::AudioEvent{eventType, message};
+        m_app->sendMessage(appMessage);
     } else {
         LOG_WARN("AudioSrvAdapter::onAudioEvent dropped: app is null");
     }

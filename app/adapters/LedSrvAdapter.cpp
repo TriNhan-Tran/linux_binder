@@ -76,7 +76,10 @@ void LedSrvAdapter::onLedEvent(int32_t eventType, const std::string& message) {
              eventType,
              message.c_str());
     if (m_app != nullptr) {
-        m_app->handleLedEvent(eventType, message);
+        Message appMessage;
+        appMessage.what = App::MSG_LED_EVENT;
+        appMessage.obj = App::LedEvent{eventType, message};
+        m_app->sendMessage(appMessage);
     } else {
         LOG_WARN("LedSrvAdapter::onLedEvent dropped: app is null");
     }

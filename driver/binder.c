@@ -290,9 +290,7 @@ void binder_loop_ctx(struct binder_state *bs, binder_handler_ctx_func func, void
                 continue;
             }
 
-            if (errno == EBADF || errno == ENODEV) {
-                LOG_INFO("binder_loop_ctx: stopping loop (%s)", strerror(errno));
-            } else {
+            if (errno != EBADF && errno != ENODEV) {
                 LOG_ERROR("binder_loop_ctx: ioctl failed (%s)", strerror(errno));
             }
             break;

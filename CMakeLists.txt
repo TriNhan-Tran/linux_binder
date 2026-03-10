@@ -13,23 +13,23 @@ target_include_directories(binder_driver PUBLIC driver)
 
 # Common IPC module
 add_library(ipc_module STATIC
-    core/Parcel.cpp
-    core/BinderClient.cpp
-    core/ServiceManager.cpp
-    core/callback/BnLedSrvCallback.cpp
-    core/callback/BpLedSrvCallback.cpp
-    core/callback/BnAudioSrvCallback.cpp
-    core/callback/BpAudioSrvCallback.cpp
-    core/callback/BnSrvCallback.cpp
-    core/callback/BpSrvCallback.cpp
-    core/callback/SrvCallbackRegistry.cpp
-    core/manager/BnSrvManager.cpp
-    core/manager/BpSrvManager.cpp
+    binder/Parcel.cpp
+    binder/BinderClient.cpp
+    binder/ServiceManager.cpp
+    binder/callback/BnLedSrvCallback.cpp
+    binder/callback/BpLedSrvCallback.cpp
+    binder/callback/BnAudioSrvCallback.cpp
+    binder/callback/BpAudioSrvCallback.cpp
+    binder/callback/BnSrvCallback.cpp
+    binder/callback/BpSrvCallback.cpp
+    binder/callback/SrvCallbackRegistry.cpp
+    binder/srv/BnSrvManager.cpp
+    binder/srv/BpSrvManager.cpp
 )
 target_include_directories(ipc_module PUBLIC
-    core
-    core/callback
-    core/manager
+    binder
+    binder/callback
+    binder/srv
     driver
 )
 target_link_libraries(ipc_module PUBLIC binder_driver pthread)
@@ -42,9 +42,9 @@ add_library(srv_ipc_module STATIC
     srv/audio/BpAudioSrv.cpp
 )
 target_include_directories(srv_ipc_module PUBLIC
-    core
-    core/callback
-    core/manager
+    binder
+    binder/callback
+    binder/srv
     srv
     srv/led
     srv/audio
@@ -55,15 +55,18 @@ target_link_libraries(srv_ipc_module PUBLIC ipc_module)
 # App module implementation
 add_library(app_module STATIC
     app/App.cpp
+    base/Handler.cpp
     app/adapters/LedSrvAdapter.cpp
     app/adapters/AudioSrvAdapter.cpp
 )
 target_include_directories(app_module PUBLIC
+    .
     app
     app/adapters
-    core
-    core/callback
-    core/manager
+    base
+    binder
+    binder/callback
+    binder/srv
     srv/led
     srv/audio
     driver
@@ -72,12 +75,12 @@ target_link_libraries(app_module PUBLIC srv_ipc_module)
 
 # Service modules
 add_library(srv_manager_module STATIC
-    core/manager/SrvManager.cpp
-    core/manager/SrvManagerApp.cpp
+    binder/srv/SrvManager.cpp
+    binder/srv/SrvManagerApp.cpp
 )
 target_include_directories(srv_manager_module PUBLIC
-    core
-    core/manager
+    binder
+    binder/srv
     driver
 )
 target_link_libraries(srv_manager_module PUBLIC ipc_module)
@@ -88,8 +91,8 @@ add_library(led_srv_module STATIC
 )
 target_include_directories(led_srv_module PUBLIC
     srv/led
-    core
-    core/callback
+    binder
+    binder/callback
     driver
 )
 target_link_libraries(led_srv_module PUBLIC srv_ipc_module)
@@ -100,8 +103,8 @@ add_library(audio_srv_module STATIC
 )
 target_include_directories(audio_srv_module PUBLIC
     srv/audio
-    core
-    core/callback
+    binder
+    binder/callback
     driver
 )
 target_link_libraries(audio_srv_module PUBLIC srv_ipc_module)
@@ -109,21 +112,23 @@ target_link_libraries(audio_srv_module PUBLIC srv_ipc_module)
 # Executables (main.cpp contains only main())
 add_executable(app app/main.cpp)
 target_include_directories(app PRIVATE
+    .
     app
     app/adapters
-    core
-    core/callback
-    core/manager
+    base
+    binder
+    binder/callback
+    binder/srv
     srv/led
     srv/audio
     driver
 )
 target_link_libraries(app PRIVATE app_module)
 
-add_executable(srv_manager core/manager/main.cpp)
+add_executable(srv_manager binder/srv/main.cpp)
 target_include_directories(srv_manager PRIVATE
-    core
-    core/manager
+    binder
+    binder/srv
     driver
 )
 target_link_libraries(srv_manager PRIVATE srv_manager_module)
@@ -131,8 +136,8 @@ target_link_libraries(srv_manager PRIVATE srv_manager_module)
 add_executable(led_srv srv/led/main.cpp)
 target_include_directories(led_srv PRIVATE
     srv/led
-    core
-    core/callback
+    binder
+    binder/callback
     driver
 )
 target_link_libraries(led_srv PRIVATE led_srv_module)
@@ -140,8 +145,8 @@ target_link_libraries(led_srv PRIVATE led_srv_module)
 add_executable(audio_srv srv/audio/main.cpp)
 target_include_directories(audio_srv PRIVATE
     srv/audio
-    core
-    core/callback
+    binder
+    binder/callback
     driver
 )
 target_link_libraries(audio_srv PRIVATE audio_srv_module)

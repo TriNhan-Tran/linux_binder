@@ -2,5 +2,8 @@
 
 int main() {
     demo::App app;
-    return app.run();
+    app.start();
+    app.run();
+    app.stop();
+    return 0;
 }
