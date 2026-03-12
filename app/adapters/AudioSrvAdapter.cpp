@@ -1,10 +1,7 @@
-#include "AudioSrvAdapter.h"
+#include "app/App.h"
+#include "app/adapters/AudioSrvAdapter.h"
 
-#include "App.h"
-
-#include "BpAudioSrv.h"
-
-namespace demo {
+#include "binder/srv/audio/BpAudioSrv.h"
 
 AudioSrvAdapter& AudioSrvAdapter::getInstance() {
     static AudioSrvAdapter instance;
@@ -29,7 +26,7 @@ void AudioSrvAdapter::initialize(uint32_t handle) {
     }
 
     LOG_INFO("AudioSrvAdapter::initialize creating BpAudioSrv proxy for handle=%u", handle);
-    m_audioSrv = std::make_unique<ipc::BpAudioSrv>(handle);
+    m_audioSrv = std::make_unique<BpAudioSrv>(handle);
     LOG_INFO("AudioSrvAdapter::initialize completed");
 }
 
@@ -100,5 +97,3 @@ void AudioSrvAdapter::onAudioEvent(int32_t eventType, const std::string& message
         LOG_WARN("AudioSrvAdapter::onAudioEvent dropped: app is null");
     }
 }
-
-} // namespace demo

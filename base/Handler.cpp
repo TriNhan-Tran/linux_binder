@@ -1,10 +1,8 @@
-#include "Handler.h"
+#include "base/Handler.h"
 
-#include "binder.h"
+#include "driver/binder.h"
 
 #include <exception>
-
-namespace demo {
 
 Handler::~Handler() {
     stop();
@@ -192,5 +190,3 @@ void Handler::workerLoop() {
         }
     }
 }
-
-} // namespace demo

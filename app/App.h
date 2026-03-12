@@ -1,13 +1,11 @@
 #pragma once
 
 #include "base/Handler.h"
-#include "ServiceManager.h"
+#include "binder/core/BinderSrvMgr.h"
 
 #include <cstdint>
 #include <string>
 #include <thread>
-
-namespace demo {
 
 class AudioSrvAdapter;
 class LedSrvAdapter;
@@ -30,8 +28,12 @@ public:
         std::string message;
     };
 
-    App();
-    ~App();
+    App() = default;
+    ~App() override = default;
+    App(const App&) = delete;
+    App& operator=(const App&) = delete;
+    App(App&&) = delete;
+    App& operator=(App&&) = delete;
 
 protected:
     void onInit() override;
@@ -45,9 +47,9 @@ private:
     static constexpr int LOOKUP_RETRY_COUNT = 10;
 
     void startBinderThreadPool();
-    static uint32_t lookupSrvWithRetry(ipc::ServiceManager& srvManager,
-                                       const char* srvName,
-                                       int maxRetries);
+    static uint32_t lookupSrv(BinderSrvMgr& binderSrvMgr,
+                              const char* srvName,
+                              int maxRetries);
     static void releaseHandleIfValid(uint32_t handle, const char* label);
 
     void handleLedEvent(int32_t eventType, const std::string& message);
@@ -58,5 +60,3 @@ private:
     bool m_binderThreadPoolStarted = false;
     std::thread m_binderThread;
 };
-
-} // namespace demo

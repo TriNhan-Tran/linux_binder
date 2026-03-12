@@ -1,48 +1,42 @@
-#include "App.h"
+#include "app/App.h"
 
-#include "adapters/AudioSrvAdapter.h"
-#include "adapters/LedSrvAdapter.h"
+#include "app/adapters/AudioSrvAdapter.h"
+#include "app/adapters/LedSrvAdapter.h"
 
-#include "BinderClient.h"
-#include "BinderUtils.h"
-#include "TransactionCode.h"
+#include "binder/core/BinderClient.h"
+#include "binder/core/BinderUtils.h"
+#include "binder/core/TransactionCode.h"
 
 #include <any>
 #include <chrono>
 #include <stdexcept>
 #include <thread>
 
-namespace demo {
-
-App::App() = default;
-
-App::~App() = default;
-
 void App::onInit() {
     LOG_INFO("=== App starting ===");
     LOG_INFO("[App][Stress] Test sequence started");
 
-    ipc::ProcessState::self().open(ipc::BINDER_DRIVER_PATH);
-    if (!ipc::ProcessState::self().isOpen()) {
+    ProcessState::self().open(BINDER_DRIVER_PATH);
+    if (!ProcessState::self().isOpen()) {
         throw std::runtime_error("App: failed to open binder driver");
     }
 
-    ipc::ServiceManager srvManager;
+    BinderSrvMgr binderSrvMgr;
 
-    m_ledHandle = lookupSrvWithRetry(
-        srvManager,
-        ipc::LED_SRV_NAME,
+    m_ledHandle = lookupSrv(
+        binderSrvMgr,
+        LED_SRV_NAME,
         LOOKUP_RETRY_COUNT);
     if (m_ledHandle == 0) {
         throw std::runtime_error("App: failed to find LED service");
     }
 
-    m_audioHandle = lookupSrvWithRetry(
-        srvManager,
-        ipc::AUDIO_SRV_NAME,
+    m_audioHandle = lookupSrv(
+        binderSrvMgr,
+        AUDIO_SRV_NAME,
         LOOKUP_RETRY_COUNT);
     if (m_audioHandle == 0) {
-        releaseHandleIfValid(m_ledHandle, ipc::LED_SRV_NAME);
+        releaseHandleIfValid(m_ledHandle, LED_SRV_NAME);
         m_ledHandle = 0;
         throw std::runtime_error("App: failed to find audio service");
     }
@@ -124,8 +118,8 @@ void App::onRun() {
 }
 
 void App::onStop() {
-    releaseHandleIfValid(m_audioHandle, ipc::AUDIO_SRV_NAME);
-    releaseHandleIfValid(m_ledHandle, ipc::LED_SRV_NAME);
+    releaseHandleIfValid(m_audioHandle, AUDIO_SRV_NAME);
+    releaseHandleIfValid(m_ledHandle, LED_SRV_NAME);
 
     m_audioHandle = 0;
     m_ledHandle = 0;
@@ -135,7 +129,7 @@ void App::onStop() {
     audioAdapter.shutdown();
     ledAdapter.shutdown();
 
-    ipc::ProcessState::self().close();
+    ProcessState::self().close();
 
     if (m_binderThread.joinable()) {
         m_binderThread.join();
@@ -174,8 +168,8 @@ void App::handleMessage(const Message& message) {
 void App::handleLedEvent(int32_t eventType, const std::string& message) {
     const char* eventName = "LED_UNKNOWN";
     switch (eventType) {
-    case ipc::EVENT_LED_ON: eventName = "LED_ON"; break;
-    case ipc::EVENT_LED_OFF: eventName = "LED_OFF"; break;
+    case EVENT_LED_ON: eventName = "LED_ON"; break;
+    case EVENT_LED_OFF: eventName = "LED_OFF"; break;
     default:
         LOG_WARN("[App] handleLedEvent unexpected eventType=%d message='%s'",
                  eventType,
@@ -188,8 +182,8 @@ void App::handleLedEvent(int32_t eventType, const std::string& message) {
 void App::handleAudioEvent(int32_t eventType, const std::string& message) {
     const char* eventName = "UNKNOWN";
     switch (eventType) {
-    case ipc::EVENT_AUDIO_PLAYING: eventName = "AUDIO_PLAYING"; break;
-    case ipc::EVENT_AUDIO_STOPPED: eventName = "AUDIO_STOPPED"; break;
+    case EVENT_AUDIO_PLAYING: eventName = "AUDIO_PLAYING"; break;
+    case EVENT_AUDIO_STOPPED: eventName = "AUDIO_STOPPED"; break;
     default:
         eventName = "AUDIO_UNKNOWN";
         LOG_WARN("[App] handleAudioEvent unexpected eventType=%d message='%s'",
@@ -205,7 +199,7 @@ void App::releaseHandleIfValid(uint32_t handle, const char* label) {
         return;
     }
 
-    if (ipc::IPCThreadState::releaseHandle(handle) != 0) {
+    if (IPCThreadState::releaseHandle(handle) != 0) {
         LOG_ERROR("[App] Failed to release %s handle=%u", label, handle);
     } else {
         LOG_INFO("[App] Released %s handle=%u", label, handle);
@@ -215,18 +209,18 @@ void App::releaseHandleIfValid(uint32_t handle, const char* label) {
 void App::startBinderThreadPool() {
     m_binderThread = std::thread([]() {
         LOG_INFO("[App] Binder thread pool started");
-        ipc::IPCThreadState::joinThreadPool(nullptr);
+        IPCThreadState::joinThreadPool(nullptr);
     });
 }
 
-uint32_t App::lookupSrvWithRetry(
-    ipc::ServiceManager& srvManager,
+uint32_t App::lookupSrv(
+    BinderSrvMgr& binderSrvMgr,
     const char* srvName,
     int maxRetries) {
     LOG_INFO("[App] Looking up %s...", srvName);
     for (int retry = 0; retry < maxRetries; ++retry) {
         LOG_INFO("[App][Stress] lookup iteration %d/%d for %s", retry + 1, maxRetries, srvName);
-        const uint32_t handle = srvManager.getSrv(srvName);
+        const uint32_t handle = binderSrvMgr.getSrv(srvName);
         if (handle != 0) {
             LOG_INFO("[App] Found %s -> handle %u (DIRECT)", srvName, handle);
             return handle;
@@ -239,5 +233,3 @@ uint32_t App::lookupSrvWithRetry(
     LOG_ERROR("[App] Failed to find %s", srvName);
     return 0;
 }
-
-} // namespace demo

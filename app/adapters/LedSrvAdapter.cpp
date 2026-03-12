@@ -1,10 +1,8 @@
-#include "LedSrvAdapter.h"
+#include "app/adapters/LedSrvAdapter.h"
 
-#include "App.h"
+#include "app/App.h"
+#include "binder/srv/led/BpLedSrv.h"
 
-#include "BpLedSrv.h"
-
-namespace demo {
 
 LedSrvAdapter& LedSrvAdapter::getInstance() {
     static LedSrvAdapter instance;
@@ -29,7 +27,7 @@ void LedSrvAdapter::initialize(uint32_t handle) {
     }
 
     LOG_INFO("LedSrvAdapter::initialize creating BpLedSrv proxy for handle=%u", handle);
-    m_ledSrv = std::make_unique<ipc::BpLedSrv>(handle);
+    m_ledSrv = std::make_unique<BpLedSrv>(handle);
     LOG_INFO("LedSrvAdapter::initialize completed");
 }
 
@@ -84,5 +82,3 @@ void LedSrvAdapter::onLedEvent(int32_t eventType, const std::string& message) {
         LOG_WARN("LedSrvAdapter::onLedEvent dropped: app is null");
     }
 }
-
-} // namespace demo

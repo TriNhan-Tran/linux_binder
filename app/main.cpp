@@ -1,7 +1,7 @@
-#include "App.h"
+#include "app/App.h"
 
 int main() {
-    demo::App app;
+    App app;
     app.start();
     app.run();
     app.stop();

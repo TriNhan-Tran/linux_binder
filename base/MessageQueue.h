@@ -7,8 +7,6 @@
 #include <mutex>
 #include <utility>
 
-namespace demo {
-
 /**
  * @brief Generic message type for the Handler message pipeline.
  */
@@ -24,6 +22,8 @@ public:
 
     MessageQueue(const MessageQueue&) = delete;
     MessageQueue& operator=(const MessageQueue&) = delete;
+    MessageQueue(MessageQueue&&) = delete;
+    MessageQueue& operator=(MessageQueue&&) = delete;
 
     bool enqueue(const T& message) {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -71,5 +71,3 @@ private:
     std::deque<T> m_messages;
     bool m_stopped = false;
 };
-
-} // namespace demo

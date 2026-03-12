@@ -50,8 +50,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1. Start SrvManager (must be first - it's the context manager)
-echo "[1/4] Starting SrvManager..."
+# 1. Start manager process (must be first - it's the context manager)
+echo "[1/4] Starting SrvMgr (srv_manager)..."
 "$BUILD_DIR/srv_manager" &
 SM_PID=$!
 sleep 1
