@@ -1,8 +1,5 @@
 #include "binder/manager/BpSrvMgr.h"
 
-
-BpSrvMgr::BpSrvMgr() = default;
-
 int BpSrvMgr::addSrv(const std::string& name, BBinder* server) {
     LOG_INFO("BpSrvMgr::addSrv forwarding register request for '%s'", name.c_str());
     const int status = m_binderSrvMgr.addSrv(name, server);

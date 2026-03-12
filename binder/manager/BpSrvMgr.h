@@ -13,8 +13,6 @@
  */
 class BpSrvMgr : public ISrvMgr {
 public:
-    BpSrvMgr();
-
     int addSrv(const std::string& name, BBinder* server) override;
     uint32_t getSrv(const std::string& name) override;
 
