@@ -2,6 +2,9 @@
 
 #include <cstdint>
 
+/** @brief Default Binder driver path used by this demo. */
+inline constexpr const char* BINDER_DRIVER_PATH = "/dev/binderfs/binder";
+
 
 /** @brief SrvMgr registered name for LED server. */
 inline constexpr const char* LED_SRV_NAME = "led.service";
